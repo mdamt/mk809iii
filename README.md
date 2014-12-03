@@ -75,3 +75,5 @@ dd if=full.img of=/dev/XXX conv=sync,fsync seek=$((0x2000+0x4000))
 ```
 
 Adjust `/dev/XXX` to your SD card device assignment.
+
+*To be continued with the rootfs*
