@@ -1,0 +1,5 @@
+. /etc/blankon/common
+
+PS1='blankon# '
+
+clear

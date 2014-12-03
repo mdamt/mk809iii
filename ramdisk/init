@@ -1,0 +1,24 @@
+#!/bin/busybox sh
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+/bin/busybox mkdir -p /usr
+/bin/busybox ln -s /bin /usr/bin
+/bin/busybox ln -s /sbin /usr/sbin
+/bin/busybox --install -s
+
+mkdir -p /dev /mnt /proc /sys
+
+mount -t devtmpfs devtmpfs /dev
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+
+hostname blankon
+
+#. /etc/blankon/rkinit
+. /etc/blankon/init
+
+ENV=/etc/blankon/shinit
+export ENV
+exec setsid cttyhack /bin/sh

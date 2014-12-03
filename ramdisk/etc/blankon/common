@@ -1,0 +1,150 @@
+_rootwait()
+{
+	_wait=${1:-10}
+	while [ ! -e "${rootdev}" -a ${_wait} -gt 0 ]; do
+		echo waiting ${rootdev}
+		sleep 1
+		_wait=$((_wait - 1))
+	done
+	unset _wait
+}
+
+_umount()
+{
+	_path=${1:-/mnt}
+	while [ ${_mounted} -gt 0 ]; do
+		umount ${_path}
+		_mounted=$((_mounted - 1))
+	done
+	unset _mounted _path
+}
+
+_boot()
+{
+	if [ -z "${root}" -o -z "${init}" ]; then
+		echo root= and init= must be set!
+		return 1
+	fi
+
+	rootdev=${root%:*}
+
+	_rootwait
+
+	if [ ! -e "${rootdev}" ]; then
+		echo ${rootdev} not found!
+		return 1
+	fi
+
+	if [ -b "${rootdev}" ]; then
+		if ! mount ${rootdev} /mnt; then
+			return 1
+		fi
+		_mounted=1
+		rootdir=/mnt${root##*:}
+	elif [ -d "${rootdev}" ]; then
+		rootdir=${rootdev}${root##*:}
+	elif [ -f "${rootdev}" ]; then
+		if ! mount -o loop ${rootdev} /mnt; then
+			return 1
+		fi
+		_mounted=1
+		rootdir=/mnt${root##*:}
+	else
+		echo ${rootdev} is not supported!
+		return 1
+	fi
+
+	if [ -f "${rootdir}" ]; then
+		if ! mount -o loop ${rootdir} /mnt; then
+			_umount
+			return 1
+		fi
+		_mounted=2
+		rootdir=/mnt
+	elif [ ! -d "${rootdir}" ]; then
+		echo ${rootdir} is not a directory!
+		_umount
+		return 1
+	fi
+
+	if [ "${autoboot}" = "1" -a -e ${rootdir}/.noautoboot ]; then
+		echo ${root}/.noautoboot found!
+		_umount
+		return 1
+	fi
+
+	if [ ! -x ${rootdir}/${init} ]; then
+		echo ${root}/${init} is not executable!
+		_umount
+		return 1
+	fi
+
+	mkdir -p /newroot
+	mount -o bind ${rootdir} /newroot
+	mount -o move /dev /newroot/dev
+
+	pkill .
+	umount `awk '$2 !~ /^\/newroot/ {print $2}' /proc/mounts`
+
+	exec switch_root /newroot ${init}
+}
+
+boot()
+{
+	case $# in
+	2)
+		root=$1
+		init=$2
+		;;
+	1)
+		root=$1
+		init=/sbin/init
+		;;
+	0)
+		unset root init
+		. /.env
+		;;
+	*)
+		echo usage: boot device:[/] [/sbin/init]
+		return 1
+		;;
+	esac
+
+	unset autoboot
+	_boot
+}
+
+loadenv()
+{
+	dd if=/dev/block/mtd/by-name/misc bs=16384 skip=255 count=1 | gzip -d > /.env
+	if [ ! -s /.env ]; then
+		cat <<EOF > /.env
+#root=/dev/mmcblk0p1:/linuxroot
+#init=/sbin/init
+#ethaddr=00:11:22:33:44:55
+#fbset_args="-a -nonstd 1 -g 1920 1080 1920 1080 32 -rgba 8/0,8/8,8/16,8/24"
+#fbset_args="-a -nonstd 4 -g 1280 720 1280 720 16 -rgba 5/11,6/5,5/0,0/0"
+#autoboot=1
+EOF
+	fi
+}
+
+saveenv()
+{
+	gzip -9 < /.env | dd of=/dev/block/mtd/by-name/misc bs=16384 conv=sync,fsync seek=255 count=1
+}
+
+eraseenv()
+{
+	dd if=/dev/zero of=/dev/block/mtd/by-name/misc bs=16384 conv=sync,fsync seek=255 count=1
+}
+
+editenv()
+{
+	vi /.env
+}
+
+showenv()
+{
+	cat /.env
+}

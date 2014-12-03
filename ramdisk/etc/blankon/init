@@ -1,0 +1,25 @@
+. /etc/blankon/common
+
+loadenv
+. /.env
+
+if [ -z "${ethaddr}" ]; then
+	wait=5
+	while [ ! -e /sys/class/net/wlan0/address -a ${wait} -gt 0 ]; do
+		sleep 1
+		wait=$((wait - 1))
+	done
+	ethaddr=`cat /sys/class/net/wlan0/address`
+fi
+
+if [ -n "${ethaddr}" ]; then
+	ip link set dev eth0 address ${ethaddr}
+fi
+
+if [ -n "${fbset_args}" ]; then
+	fbset ${fbset_args}
+fi
+
+if [ "${autoboot}" = "1" ]; then
+	_boot
+fi
