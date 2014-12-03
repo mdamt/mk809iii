@@ -32,7 +32,8 @@ Prepare the compilation and build
 cd linux
 cp blankon/config .config
 source blankon/envsetup.sh
-make -z9 zImage
+make blankon-rk3188_defconfig
+make -z9 zImage dtbs
 ```
 
 Adjust `9` to the number of cores of your processor.
