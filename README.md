@@ -40,6 +40,7 @@ Adjust `9` to the number of cores of your processor.
 
 The result is `arch/arm/boot/zImage` file.
 
+
 ramdisk
 =======
 
@@ -55,6 +56,10 @@ Copy the kernel file as `kernel`:
 cd $WORK/mk809iii
 cp ../linux/arch/arm/boot/zImage kernel
 ```
+
+### If you have your own kernel
+If you have your own kernel, put it here with the name `kernel`.
+If your kernel is already in .img format, put it with the name `kernel.img`.
 
 Build the ramdisk image:
 ```
